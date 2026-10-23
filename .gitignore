@@ -1,0 +1,25 @@
+# secrets
+.env
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# django
+webapp/db.sqlite3
+webapp/dev.sqlite3
+webapp/staticfiles/
+
+# data (download from Kaggle, see README)
+data/raw/*.csv
+data/archive/*
+!data/raw/.gitkeep
+!data/archive/.gitkeep
+
+# editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,96 @@
+// =====================================================================
+// SalesPulse - DAX measures
+// Create a blank table called _Measures (Home > Enter data > OK) and add
+// every measure below to it (Modeling > New measure). One measure per box.
+// =====================================================================
+
+// ---------- Sales ----------
+Revenue = SUM ( FactSales[price] )
+
+Freight = SUM ( FactSales[freight] )
+
+Orders = DISTINCTCOUNT ( FactSales[order_id] )
+
+Units Sold = SUM ( FactSales[quantity] )
+
+Avg Order Value = DIVIDE ( [Revenue], [Orders] )
+
+Avg Item Price = AVERAGE ( FactSales[price] )
+
+// ---------- Time intelligence (needs DimDate marked as date table) ----------
+Revenue YTD = TOTALYTD ( [Revenue], DimDate[date] )
+
+Revenue PY = CALCULATE ( [Revenue], SAMEPERIODLASTYEAR ( DimDate[date] ) )
+
+Revenue YoY % = DIVIDE ( [Revenue] - [Revenue PY], [Revenue PY] )
+
+Revenue PM = CALCULATE ( [Revenue], DATEADD ( DimDate[date], -1, MONTH ) )
+
+Revenue MoM % = DIVIDE ( [Revenue] - [Revenue PM], [Revenue PM] )
+
+Orders PY = CALCULATE ( [Orders], SAMEPERIODLASTYEAR ( DimDate[date] ) )
+
+Orders YoY % = DIVIDE ( [Orders] - [Orders PY], [Orders PY] )
+
+// ---------- Customers ----------
+// customer_id is new for every order in Olist, so always count customer_unique_id
+Customers =
+CALCULATE ( DISTINCTCOUNT ( DimCustomer[customer_unique_id] ), FactOrders )
+
+Repeat Customers =
+COUNTROWS (
+    FILTER (
+        VALUES ( DimCustomer[customer_unique_id] ),
+        CALCULATE ( DISTINCTCOUNT ( FactOrders[order_id] ) ) > 1
+    )
+)
+
+Repeat Customer Rate = DIVIDE ( [Repeat Customers], [Customers] )
+
+Revenue per Customer = DIVIDE ( [Revenue], [Customers] )
+
+// ---------- Delivery & reviews ----------
+Delivered Orders =
+CALCULATE ( COUNTROWS ( FactOrders ), NOT ISBLANK ( FactOrders[delivered_date_key] ) )
+
+Late Orders =
+CALCULATE ( COUNTROWS ( FactOrders ), FactOrders[is_late] = TRUE () )
+
+Late Delivery Rate = DIVIDE ( [Late Orders], [Delivered Orders] )
+
+Avg Delivery Days = AVERAGE ( FactOrders[delivery_days] )
+
+Avg Delay Days = AVERAGE ( FactOrders[delay_days] )
+
+Avg Review Score = AVERAGE ( FactOrders[review_score] )
+
+Low Review Rate =
+DIVIDE (
+    CALCULATE ( COUNTROWS ( FactOrders ), FactOrders[review_score] <= 2 ),
+    CALCULATE ( COUNTROWS ( FactOrders ), NOT ISBLANK ( FactOrders[review_score] ) )
+)
+
+// Orders counted by the day they ARRIVED (uses the inactive relationship)
+Orders Delivered On Date =
+CALCULATE (
+    COUNTROWS ( FactOrders ),
+    USERELATIONSHIP ( FactOrders[delivered_date_key], DimDate[date_key] )
+)
+
+// ---------- Ranking ----------
+Category Revenue Rank =
+IF (
+    HASONEVALUE ( DimProduct[category] ),
+    RANKX ( ALL ( DimProduct[category] ), [Revenue] )
+)
+
+Category Share of Revenue =
+DIVIDE ( [Revenue], CALCULATE ( [Revenue], ALL ( DimProduct[category] ) ) )
+
+// ---------- Estimated profit ----------
+// Olist has NO cost data. Create a What-if parameter first:
+// Modeling > New parameter > Numeric range, name "COGS %", 0 to 0.9, step 0.05, default 0.6
+// Then always label these visuals "Estimated".
+Estimated Gross Profit = [Revenue] * ( 1 - 'COGS %'[COGS % Value] )
+
+Estimated Gross Margin % = DIVIDE ( [Estimated Gross Profit], [Revenue] )

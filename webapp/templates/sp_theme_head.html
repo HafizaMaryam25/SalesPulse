@@ -1,0 +1,9 @@
+{% load static %}{# Shared by the admin and API skins: same fonts, same palette, same saved theme as the app #}
+<script>
+  try { var t = localStorage.getItem("sp-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'core/css/tokens.css' %}">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23e5a032'/%3E%3Cpath d='M3 12h4l2.5-6 4 12L16 9l1.5 3H21' fill='none' stroke='%2310231c' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">

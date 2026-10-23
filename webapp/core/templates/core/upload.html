@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% load sp_extras %}
+{% block title %}Data uploads{% endblock %}
+{% block head %}{% if any_running %}<meta http-equiv="refresh" content="5">{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Data uploads</h1>
+    <p>Replace one Olist file. It's checked first, then the ETL reloads the warehouse.</p>
+  </div>
+</div>
+
+<div class="grid">
+  <form class="panel span-7" method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+    <div class="panel-head"><div><h2>Upload a CSV</h2><p>UTF-8 CSV, up to {{ max_upload_mb }} MB</p></div></div>
+    <div class="panel-body stack">
+      <div class="field {% if form.dataset.errors %}has-error{% endif %}">
+        <label for="{{ form.dataset.id_for_label }}">Which file is this?</label>
+        {{ form.dataset }}
+        {% for e in form.dataset.errors %}<span class="error">{{ e }}</span>{% endfor %}
+      </div>
+      <div class="field {% if form.file.errors %}has-error{% endif %}">
+        <span class="sr-only">CSV file</span>
+        <div class="dropzone">
+          <span class="icon-wrap">{% icon "file" 22 %}</span>
+          <strong data-file-label>Drop a CSV here or click to choose</strong>
+          <span class="muted">The file must keep the original Olist column names</span>
+          {{ form.file }}
+        </div>
+        {% for e in form.file.errors %}<span class="error">{{ e }}</span>{% endfor %}
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">{% icon "upload" 16 %} Check and load</button>
+    </div>
+  </form>
+
+  <section class="panel span-5" aria-labelledby="spec-title">
+    <div class="panel-head"><div><h2 id="spec-title">What each file needs</h2><p>Required columns, checked before loading</p></div></div>
+    <div style="margin-top:10px">
+      {% for key, spec in datasets.items %}
+      <details class="spec">
+        <summary>{{ spec.label }} {% icon "chevron-down" 16 %}</summary>
+        <div class="cols">
+          <span class="cell-sub" style="width:100%">{{ spec.filename }}</span>
+          {% for col in spec.required %}<code>{{ col }}</code>{% endfor %}
+        </div>
+      </details>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel span-12" aria-labelledby="hist-title">
+    <div class="panel-head">
+      <div><h2 id="hist-title">Upload history</h2><p>Last 20 uploads{% if any_running %}. This page refreshes every 5 seconds while a load runs.{% endif %}</p></div>
+    </div>
+    <div class="table-wrap" style="margin-top:14px">
+      <table class="data">
+        <thead><tr>
+          <th>File</th><th>Status</th><th class="hide-sm">Uploaded by</th><th>When</th>
+          <th class="right">Rows</th><th class="right">Rejected</th><th class="hide-sm">Result</th>
+        </tr></thead>
+        <tbody>
+        {% for u in uploads %}
+          <tr>
+            <td><div class="cell-main">{{ u.original_name }}</div><div class="cell-sub">{{ u.get_dataset_display }}</div></td>
+            <td><span class="pill {{ u.status }}">{{ u.get_status_display }}</span></td>
+            <td class="hide-sm">{{ u.user|default:"–" }}</td>
+            <td class="num">{{ u.created_at|date:"M d, H:i" }}</td>
+            <td class="right num">{{ u.rows_read|num }}</td>
+            <td class="right num">{{ u.rows_rejected|num }}</td>
+            <td class="hide-sm cell-sub" style="max-width:360px">
+              {{ u.message }}
+              {% if u.checks %}
+              <details><summary>{{ u.checks|length }} data-quality finding{{ u.checks|length|pluralize }}</summary>
+                <ul style="margin:6px 0 0;padding-left:18px">
+                  {% for c in u.checks %}<li>{{ c.check }}: {{ c.rows|num }} rows {{ c.action }}</li>{% endfor %}
+                </ul>
+              </details>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7"><div class="empty"><h3>No uploads yet</h3><p>Your first upload will show here with its validation results.</p></div></td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

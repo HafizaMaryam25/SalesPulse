@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% load sp_extras %}
+{% block title %}{% if is_new %}Add item{% else %}Edit {{ item.sku }}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <p><a href="{% url 'inventory_list' %}">Inventory</a></p>
+    <h1>{% if is_new %}Add an item{% else %}Edit {{ item.name }}{% endif %}</h1>
+    {% if not is_new %}<p>Last changed {{ item.updated_at|date:"M d, Y H:i" }}{% if item.updated_by %} by {{ item.updated_by }}{% endif %}</p>{% endif %}
+  </div>
+</div>
+
+<form class="panel" method="post" novalidate style="max-width:860px">
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+  <div class="panel-body" style="padding-bottom:0">
+    <div class="message error">{% icon "alert" %}<span>{{ form.non_field_errors|join:" " }}</span></div>
+  </div>
+  {% endif %}
+  <div class="panel-body">
+    <div class="form-grid">
+      {% for field in form %}
+        {% if field.name == "is_active" %}
+        <div class="field full">
+          <label class="check">{{ field }} Active, can be sold</label>
+        </div>
+        {% else %}
+        <div class="field {% if field.name == 'name' or field.name == 'product_id' %}full{% endif %} {% if field.errors %}has-error{% endif %}">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}
+          {% for error in field.errors %}<span class="error">{{ error }}</span>{% endfor %}
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+    <datalist id="category-options">
+      {% for c in category_options %}<option value="{{ c }}">{% endfor %}
+    </datalist>
+  </div>
+  <div class="form-actions">
+    <a class="btn btn-ghost" href="{% url 'inventory_list' %}">Cancel</a>
+    <button class="btn btn-primary" type="submit">{% if is_new %}Add item{% else %}Save changes{% endif %}</button>
+  </div>
+</form>
+{% endblock %}

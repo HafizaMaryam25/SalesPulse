@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load sp_extras %}
+{% block title %}Delete {{ item.sku }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <p><a href="{% url 'inventory_list' %}">Inventory</a></p>
+    <h1>Delete {{ item.name }}?</h1>
+  </div>
+</div>
+
+<form class="panel" method="post" style="max-width:560px">
+  {% csrf_token %}
+  <div class="panel-body">
+    <p>This removes <strong>{{ item.sku }}</strong> and its {{ item.stock_qty|num }} units from inventory. A copy of the record is kept in the audit log, but the item can't be restored from here.</p>
+  </div>
+  <div class="form-actions">
+    <a class="btn btn-ghost" href="{% url 'inventory_list' %}">Keep item</a>
+    <button class="btn btn-danger" type="submit">{% icon "trash" 16 %} Delete item</button>
+  </div>
+</form>
+{% endblock %}

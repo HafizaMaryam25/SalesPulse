@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load sp_extras %}
+{% block title %}Sign in{% endblock %}
+
+{% block body %}
+<div class="auth">
+  <section class="auth-art" aria-hidden="false">
+    <a class="brand" href="{% url 'login' %}">
+      <span class="brand-mark">{% icon "pulse" 20 %}</span><span class="brand-name">SalesPulse</span>
+    </a>
+
+
+    <div>
+      <h1>Every order, stock level and delivery in one place.</h1>
+      <p>Sales and delivery data from about 100,000 Olist marketplace orders, cleaned by a Python ETL and stored in SQL Server.</p>
+    </div>
+
+    <svg class="pulse-line" viewBox="0 0 800 180" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 110 H210 L240 110 L262 40 L292 160 L318 72 L336 110 H470 L494 110 L512 86 L530 110 H800"
+            fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+
+    <div class="auth-facts">
+      <div><strong>99K</strong>orders</div>
+      <div><strong>27</strong>states</div>
+      <div><strong>73</strong>categories</div>
+    </div>
+  </section>
+
+  <section class="auth-form">
+    <div class="auth-card">
+      <h2>Sign in</h2>
+      <p>Use the account your admin gave you.</p>
+
+      {% if form.non_field_errors %}
+      <div class="message error" role="alert">{% icon "alert" %}<span>That username and password don't match. Check both and try again.</span></div>
+      <div style="height:16px"></div>
+      {% endif %}
+
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+        <div class="field">
+          <label for="{{ form.username.id_for_label }}">Username</label>
+          {{ form.username }}
+        </div>
+        <div class="field">
+          <label for="{{ form.password.id_for_label }}">Password</label>
+          {{ form.password }}
+        </div>
+        <button class="btn btn-primary" type="submit">{% icon "lock" 16 %} Sign in</button>
+      </form>
+
+      <p class="auth-foot">Roles: Admin manages everything, Analyst uploads data and edits stock, Viewer reads reports.</p>
+    </div>
+  </section>
+</div>
+{% endblock %}

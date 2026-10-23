@@ -1,0 +1,59 @@
+{% extends "rest_framework/base.html" %}
+{% load static sp_extras %}
+{# SalesPulse skin for the browsable REST API (the page you see when you open /api/... in a browser). #}
+
+{% block title %}{% if name %}{{ name }} – {% endif %}SalesPulse API{% endblock %}
+
+{% block style %}
+  {{ block.super }}
+  {% include "sp_theme_head.html" %}
+  <link rel="stylesheet" href="{% static 'core/css/api-skin.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% url 'api_sales_summary' as u_summary %}{% url 'api_categories' as u_categories %}
+{% url 'api_top_products' as u_products %}{% url 'api-inventory-list' as u_inventory %}
+<header class="sp-api-bar">
+  <div class="sp-api-bar-inner">
+    <a class="sp-brand" href="{% url 'dashboard' %}">
+      <span class="sp-brand-mark">{% icon "pulse" 18 %}</span>
+      <span class="sp-brand-name">SalesPulse</span>
+      <span class="sp-tag">API</span>
+    </a>
+    <nav class="sp-endpoints" aria-label="Endpoints">
+      <a href="{{ u_summary }}" {% if request.path == u_summary %}aria-current="page"{% endif %}>Sales summary</a>
+      <a href="{{ u_categories }}" {% if request.path == u_categories %}aria-current="page"{% endif %}>Categories</a>
+      <a href="{{ u_products }}" {% if request.path == u_products %}aria-current="page"{% endif %}>Top products</a>
+      <a href="{{ u_inventory }}" {% if u_inventory in request.path %}aria-current="page"{% endif %}>Inventory</a>
+    </nav>
+    <div class="sp-api-actions">
+      {% if user.is_authenticated %}<span class="sp-user">{{ user.get_username }}</span>{% endif %}
+      <button class="sp-icon-btn" type="button" data-sp-theme aria-label="Switch theme">
+        <span class="when-light">{% icon "moon" 16 %}</span><span class="when-dark">{% icon "sun" 16 %}</span>
+      </button>
+      <a class="sp-back" href="{% url 'dashboard' %}">{% icon "arrow-left" 14 %} Back to SalesPulse</a>
+    </div>
+  </div>
+</header>
+<div class="container sp-explain">
+  <p>This is the raw data feed behind SalesPulse, in JSON. Power BI, Excel or a script can read these URLs
+     directly instead of the database. Add <code>?format=json</code> to any URL to get plain JSON.</p>
+</div>
+{% endblock %}
+
+{% block script %}
+  {{ block.super }}
+  <script>
+    (function () {
+      var root = document.documentElement;
+      function current() { return root.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"); }
+      document.querySelectorAll("[data-sp-theme]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          var next = current() === "dark" ? "light" : "dark";
+          var apply = function () { root.dataset.theme = next; try { localStorage.setItem("sp-theme", next); } catch (e) {} };
+          if (document.startViewTransition && !matchMedia("(prefers-reduced-motion: reduce)").matches) document.startViewTransition(apply); else apply();
+        });
+      });
+    })();
+  </script>
+{% endblock %}

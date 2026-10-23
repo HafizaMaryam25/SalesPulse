@@ -1,0 +1,52 @@
+{% extends "admin/base.html" %}
+{% load static sp_extras %}
+{# SalesPulse skin for Django admin: same palette, fonts and light/dark setting as the app. #}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block dark-mode-vars %}
+  <script>
+    /* Admin keeps its own theme in localStorage "theme" (light/dark/auto).
+       Start from the app's choice so both look the same. */
+    try {
+      var sp = localStorage.getItem("sp-theme");
+      localStorage.setItem("theme", sp === "light" || sp === "dark" ? sp : "auto");
+    } catch (e) {}
+  </script>
+  {{ block.super }}
+{% endblock %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  {% include "sp_theme_head.html" %}
+  <link rel="stylesheet" href="{% static 'core/css/admin-skin.css' %}">
+{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <script>
+    /* When the admin's own theme button is used, save the choice for the app too. */
+    new MutationObserver(function () {
+      var t = document.documentElement.dataset.theme;
+      try {
+        if (t === "light" || t === "dark") localStorage.setItem("sp-theme", t);
+        else localStorage.removeItem("sp-theme");
+      } catch (e) {}
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  </script>
+{% endblock %}
+
+{% block branding %}
+<div id="site-name">
+  <a class="sp-brand" href="{% url 'admin:index' %}">
+    <span class="sp-brand-mark">{% icon "pulse" 18 %}</span>
+    <span>{{ site_header|default:_('Django administration') }}</span>
+  </a>
+  <a class="sp-back" href="{% url 'dashboard' %}">{% icon "arrow-left" 14 %} Back to SalesPulse</a>
+</div>
+{% if user.is_anonymous %}
+  {% include "admin/color_theme_toggle.html" %}
+{% endif %}
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

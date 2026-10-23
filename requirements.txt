@@ -1,0 +1,9 @@
+# Python 3.11+
+Django==5.2.*
+djangorestframework>=3.15
+mssql-django>=1.5
+pyodbc>=5.0
+pandas>=2.1
+numpy>=1.26
+SQLAlchemy>=2.0
+python-dotenv>=1.0

@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% load sp_extras %}
+{% block title %}Inventory{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Inventory</h1>
+    <p>Stock on hand for the products you sell. Items at or below their reorder level show as low.</p>
+  </div>
+  {% if allowed.edit_inventory %}
+  <a class="btn btn-primary" href="{% url 'inventory_create' %}">{% icon "plus" 16 %} Add item</a>
+  {% endif %}
+</div>
+
+<div class="panel" style="margin-bottom:18px">
+  <div class="stat-strip">
+    <div class="stat">
+      <div class="stat-label">{% icon "box" 16 %} Items</div>
+      <div class="stat-value num">{{ summary.skus|num }}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">{% icon "alert" 16 %} Low stock</div>
+      <div class="stat-value num">{{ summary.low|num }}</div>
+      <div class="stat-hint"><a href="?status=low">Show low stock</a></div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">{% icon "close" 16 %} Out of stock</div>
+      <div class="stat-value num">{{ summary.out|num }}</div>
+      <div class="stat-hint"><a href="?status=out">Show out of stock</a></div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">{% icon "database" 16 %} Stock value at cost</div>
+      <div class="stat-value num">{{ summary.stock_value|compact:"R$ " }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <form class="filters" method="get" role="search">
+    <label class="search">
+      <span class="sr-only">Search</span>
+      {% icon "search" 16 %}
+      <input class="input" type="search" name="q" value="{{ filters.q }}" placeholder="Search name, SKU or ID">
+    </label>
+    <label>
+      <span class="sr-only">Category</span>
+      <select class="input" name="category" onchange="this.form.submit()">
+        <option value="">All categories</option>
+        {% for c in categories %}<option value="{{ c }}" {% if c == filters.category %}selected{% endif %}>{{ c|label }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>
+      <span class="sr-only">Stock status</span>
+      <select class="input" name="status" onchange="this.form.submit()">
+        <option value="">Any stock level</option>
+        <option value="ok" {% if filters.status == "ok" %}selected{% endif %}>In stock</option>
+        <option value="low" {% if filters.status == "low" %}selected{% endif %}>Low stock</option>
+        <option value="out" {% if filters.status == "out" %}selected{% endif %}>Out of stock</option>
+      </select>
+    </label>
+    <label>
+      <span class="sr-only">Sort</span>
+      <select class="input" name="sort" onchange="this.form.submit()">
+        <option value="name" {% if filters.sort == "name" %}selected{% endif %}>Name A–Z</option>
+        <option value="stock_qty" {% if filters.sort == "stock_qty" %}selected{% endif %}>Lowest stock first</option>
+        <option value="-unit_price" {% if filters.sort == "-unit_price" %}selected{% endif %}>Highest price first</option>
+        <option value="-updated_at" {% if filters.sort == "-updated_at" %}selected{% endif %}>Recently updated</option>
+      </select>
+    </label>
+    <button class="btn btn-ghost" type="submit">Search</button>
+  </form>
+
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th class="hide-sm">SKU</th>
+          <th class="right">Price</th>
+          <th class="right hide-sm">Cost</th>
+          <th class="right hide-sm">Margin</th>
+          <th class="right">Stock</th>
+          <th>Status</th>
+          <th><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for item in page %}
+        <tr>
+          <td>
+            <div class="cell-main">{{ item.name }}{% if not item.is_active %} <span class="pill">Inactive</span>{% endif %}</div>
+            <div class="cell-sub">{{ item.category|label }}</div>
+          </td>
+          <td class="hide-sm code">{{ item.sku }}</td>
+          <td class="right num">{{ item.unit_price|brl:2 }}</td>
+          <td class="right num hide-sm">{{ item.unit_cost|brl:2 }}</td>
+          <td class="right num hide-sm">{{ item.margin_pct|pct:0 }}</td>
+          <td class="right num">{{ item.stock_qty|num }} <span class="cell-sub">/ {{ item.reorder_level }}</span></td>
+          <td>
+            {% if item.stock_status == "out" %}<span class="pill out">Out of stock</span>
+            {% elif item.stock_status == "low" %}<span class="pill low">Low</span>
+            {% else %}<span class="pill ok">In stock</span>{% endif %}
+          </td>
+          <td>
+            <div class="row-actions">
+              {% if allowed.edit_inventory %}
+              <a class="btn-icon" href="{% url 'inventory_update' item.pk %}" aria-label="Edit {{ item.name }}">{% icon "edit" 16 %}</a>
+              {% endif %}
+              {% if allowed.delete_inventory %}
+              <a class="btn-icon danger" href="{% url 'inventory_delete' item.pk %}" aria-label="Delete {{ item.name }}">{% icon "trash" 16 %}</a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="8">
+          <div class="empty">
+            {% if filters.q or filters.category or filters.status %}
+              <h3>No items match these filters</h3>
+              <p>Clear the search or pick a different category.</p>
+              <a class="btn btn-ghost" href="{% url 'inventory_list' %}">Clear filters</a>
+            {% else %}
+              <h3>No inventory yet</h3>
+              <p>Add your first item, or run <code>python manage.py seed_inventory</code> for demo stock.</p>
+              {% if allowed.edit_inventory %}<a class="btn btn-primary" href="{% url 'inventory_create' %}">{% icon "plus" 16 %} Add item</a>{% endif %}
+            {% endif %}
+          </div>
+        </td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "core/partials/pagination.html" %}
+</div>
+{% endblock %}

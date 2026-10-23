@@ -1,0 +1,96 @@
+{% load static sp_extras %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}SalesPulse{% endblock %} – SalesPulse</title>
+  <script>
+    try { var t = localStorage.getItem("sp-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'core/css/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'core/css/app.css' %}">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23e5a032'/%3E%3Cpath d='M3 12h4l2.5-6 4 12L16 9l1.5 3H21' fill='none' stroke='%2310231c' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  {% block head %}{% endblock %}
+</head>
+<body>
+{% block body %}
+{% with section=request.resolver_match.url_name %}
+<header class="topbar">
+  <a class="brand" href="{% url 'dashboard' %}"><span class="brand-mark">{% icon "pulse" 20 %}</span><span class="brand-name">SalesPulse</span></a>
+  <button type="button" data-nav-toggle aria-label="Open menu">{% icon "menu" 22 %}</button>
+</header>
+
+<div class="shell">
+  <aside class="sidebar" aria-label="Main navigation">
+    <a class="brand" href="{% url 'dashboard' %}">
+      <span class="brand-mark">{% icon "pulse" 20 %}</span>
+      <span class="brand-name">SalesPulse</span>
+    </a>
+
+    <nav class="nav">
+      <a href="{% url 'dashboard' %}" {% if section == 'dashboard' %}aria-current="page"{% endif %}>{% icon "dashboard" %} Sales overview</a>
+      <a href="{% url 'inventory_list' %}" {% if section|slice:":9" == 'inventory' %}aria-current="page"{% endif %}>{% icon "box" %} Inventory</a>
+      {% if allowed.upload_data %}
+      <a href="{% url 'upload' %}" {% if section == 'upload' %}aria-current="page"{% endif %}>{% icon "upload" %} Data uploads</a>
+      {% endif %}
+      {% if allowed.view_audit %}
+      <a href="{% url 'audit_log' %}" {% if section == 'audit_log' %}aria-current="page"{% endif %}>{% icon "shield" %} Audit log</a>
+      {% endif %}
+
+      {% if allowed.use_api or user.is_staff %}
+      {# Developer tools: they open outside this layout, hence the arrow #}
+      <div class="nav-group">Developers</div>
+      {% if allowed.use_api %}
+      <a href="{% url 'api_sales_summary' %}" title="Browse the JSON API other apps (Power BI, scripts) read from">{% icon "code" %} REST API <span class="ext">{% icon "arrow-up-right" 14 %}</span></a>
+      {% endif %}
+      {% if user.is_staff %}
+      <a href="{% url 'admin:index' %}" title="Raw database tables: users, roles, inventory, uploads">{% icon "settings" %} Django admin <span class="ext">{% icon "arrow-up-right" 14 %}</span></a>
+      {% endif %}
+      {% endif %}
+    </nav>
+
+    <div class="side-foot">
+      <div class="who">
+        <span class="avatar">{{ user.get_username|slice:":1" }}</span>
+        <div>
+          <div class="who-name">{{ user.get_full_name|default:user.get_username }}</div>
+          <div class="who-role">{{ user_role }}</div>
+        </div>
+      </div>
+      <div class="side-actions">
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <button class="side-btn" type="submit">{% icon "logout" 16 %} Sign out</button>
+        </form>
+        <button class="side-btn square" type="button" data-theme-toggle aria-label="Switch theme">
+          <span class="when-light">{% icon "moon" 16 %}</span><span class="when-dark" hidden>{% icon "sun" 16 %}</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main" id="main">
+    {% if messages %}
+    <div class="messages" role="status">
+      {% for message in messages %}
+      <div class="message {{ message.tags }}">
+        {% if message.level_tag == 'error' %}{% icon "alert" %}{% else %}{% icon "check" %}{% endif %}
+        <span>{{ message }}</span>
+        <button class="close" type="button" aria-label="Dismiss">{% icon "close" 16 %}</button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% endwith %}
+{% endblock %}
+<script src="{% static 'core/js/charts.js' %}"></script>
+<script src="{% static 'core/js/app.js' %}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

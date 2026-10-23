@@ -1,0 +1,14 @@
+{% if page.paginator.num_pages > 1 %}
+<div class="pager">
+  <span>Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }}</span>
+  <div class="links">
+    {% if page.has_previous %}
+    <a class="btn btn-ghost" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page.previous_page_number }}">Previous</a>
+    {% endif %}
+    <span class="btn" style="cursor:default">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}
+    <a class="btn btn-ghost" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page.next_page_number }}">Next</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

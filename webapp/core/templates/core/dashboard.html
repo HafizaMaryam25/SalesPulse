@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% load sp_extras %}
+{% block title %}Sales overview{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Sales overview</h1>
+    <p>{{ period.label }}{% if period.compare_label %}, {{ period.compare_label }}{% endif %}</p>
+  </div>
+  <nav class="segmented" aria-label="Choose a year">
+    <a href="?" aria-current="{% if not year %}true{% else %}false{% endif %}">All time</a>
+    {% for y in years %}
+    <a href="?year={{ y }}" aria-current="{% if y == year %}true{% else %}false{% endif %}">{{ y }}</a>
+    {% endfor %}
+  </nav>
+</div>
+
+{% if not warehouse_ok %}
+<div class="notice" role="alert">
+  {% icon "database" 22 %}
+  <div>
+    <strong>The warehouse didn't answer.</strong>
+    <p class="muted">Check that SQL Server is running and that you ran <code>sql/01_create_schema.sql</code>, the ETL, then <code>02_views.sql</code> and <code>03_stored_procedures.sql</code>.</p>
+  </div>
+</div>
+{% endif %}
+
+<div class="grid">
+  <!-- Revenue: the one big number on the page -->
+  <section class="panel span-8 hero" aria-labelledby="rev-title">
+    <div class="hero-top">
+      <div>
+        <div class="hero-label" id="rev-title">Revenue</div>
+        <div class="hero-value num"><small>R$</small>{{ kpi.total_revenue|num }}</div>
+        <div class="hero-sub">
+          {% delta deltas.revenue %}
+          <span>{% if period.compare_label %}{{ period.compare_label }}{% else %}Product revenue, freight excluded{% endif %}</span>
+        </div>
+      </div>
+      <div class="segmented" role="group" aria-label="Chart shows">
+        <button type="button" data-series="revenue" aria-pressed="true">Revenue</button>
+        <button type="button" data-series="orders" aria-pressed="false">Orders</button>
+      </div>
+    </div>
+    <div class="chart" id="chart-revenue"></div>
+    {% if partial_months %}
+    <p class="chart-note">Not in the chart:
+      {% for m in partial_months %}{{ m.month_start|date:"M Y" }} ({{ m.orders }} order{{ m.orders|pluralize }}){% if not forloop.last %}, {% endif %}{% endfor %}.
+      The data export starts and ends part-way through these months.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel span-4 metrics" aria-label="Order metrics">
+    <div class="metric">
+      <span class="metric-label">Orders</span>
+      <span class="metric-value num">{{ kpi.total_orders|num }}</span>
+      {% delta deltas.orders %}
+      <span class="metric-hint">{{ kpi.total_units|num }} items sold</span>
+    </div>
+    <div class="metric">
+      <span class="metric-label">Average order value</span>
+      <span class="metric-value num">{{ kpi.avg_order_value|brl:2 }}</span>
+      {% delta deltas.aov %}
+      <span class="metric-hint">Revenue divided by orders</span>
+    </div>
+    <div class="metric">
+      <span class="metric-label">Customers</span>
+      <span class="metric-value num">{{ kpi.total_customers|num }}</span>
+      {% delta deltas.customers %}
+      <span class="metric-hint">Counted by customer_unique_id</span>
+    </div>
+    <div class="metric">
+      <span class="metric-label">Repeat customers</span>
+      <span class="metric-value num">{{ kpi.repeat_rate_pct|pct }}</span>
+      {% delta deltas.repeat %}
+      <span class="metric-hint">{{ kpi.repeat_customers|num }} bought more than once</span>
+    </div>
+  </section>
+
+  <section class="panel span-7" aria-labelledby="cat-title">
+    <div class="panel-head">
+      <div>
+        <h2 id="cat-title">Top categories</h2>
+        <p>By revenue, with share of the period total</p>
+      </div>
+    </div>
+    <div class="panel-body">
+      {% if categories %}
+      <ol class="ranks">
+        {% for c in categories %}
+        <li class="rank">
+          <span class="rank-pos">{{ c.revenue_rank }}</span>
+          <span class="rank-name">{{ c.category|label }}</span>
+          <span class="rank-val num">{{ c.revenue|compact:"R$ " }}</span>
+          <span class="rank-bar"><span style="width: {% widthratio c.revenue categories.0.revenue 100 %}%"></span></span>
+          <span class="rank-meta num">{{ c.revenue_share_pct|pct }} of revenue, {{ c.orders|num }} orders</span>
+        </li>
+        {% endfor %}
+      </ol>
+      {% else %}
+      <div class="empty"><h3>No category data</h3><p>Load data with the ETL to see categories here.</p></div>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="panel span-5" aria-labelledby="reg-title">
+    <div class="panel-head">
+      <div>
+        <h2 id="reg-title">Revenue by region</h2>
+        <p>Where customers had their orders delivered</p>
+      </div>
+    </div>
+    <div class="panel-body">
+      {% if regions %}
+      <ol class="ranks">
+        {% for r in regions %}
+        <li class="rank">
+          <span class="rank-pos">{{ forloop.counter }}</span>
+          <span class="rank-name">{{ r.region }}</span>
+          <span class="rank-val num">{{ r.share_pct|pct }}</span>
+          <span class="rank-bar"><span style="width: {{ r.share_pct|floatformat:1 }}%"></span></span>
+          <span class="rank-meta num">{{ r.revenue|compact:"R$ " }} from {{ r.orders|num }} orders in {{ r.states|num }} state{{ r.states|pluralize }}</span>
+        </li>
+        {% endfor %}
+      </ol>
+      {% else %}
+      <div class="empty"><h3>No regional data</h3></div>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="panel span-12" aria-labelledby="del-title">
+    <div class="panel-head">
+      <div>
+        <h2 id="del-title">Delivery and reviews</h2>
+        <p>Late means delivered after the date promised at checkout</p>
+      </div>
+    </div>
+    <div class="delivery" style="margin-top:14px; border-top:1px solid var(--line)">
+      <div>
+        <div class="stat">
+          <div class="stat-label">{% icon "truck" 16 %} Late deliveries</div>
+          <div class="stat-value num">{{ kpi.late_delivery_rate_pct|pct }}</div>
+          <div class="stat-hint">{% delta deltas.late "down" %}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">{% icon "dashboard" 16 %} Average delivery time</div>
+          <div class="stat-value num">{{ kpi.avg_delivery_days|num:1 }} days</div>
+          <div class="stat-hint">From purchase to the customer's door</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">{% icon "star" 16 %} Average review</div>
+          <div class="stat-value num">{{ kpi.avg_review_score|num:2 }} <span class="muted" style="font-size:.9rem">/ 5</span></div>
+          <div class="stat-hint">{% delta deltas.review %}</div>
+        </div>
+      </div>
+      <div class="sub-chart">
+        <h3>Late delivery rate</h3>
+        <p>Share of delivered orders, by purchase month</p>
+        <div class="chart sm" id="chart-late"></div>
+      </div>
+      <div class="sub-chart">
+        <h3>Review score by delivery delay</h3>
+        <p>All time. Bars under 3 stars are shown in red.</p>
+        <div class="chart sm" id="chart-review"></div>
+      </div>
+    </div>
+  </section>
+
+  {% if allowed.view_etl %}
+  <section class="panel span-12" aria-labelledby="etl-title">
+    <div class="panel-head">
+      <div>
+        <h2 id="etl-title">Recent data loads</h2>
+        <p>From the EtlRunLog table</p>
+      </div>
+      {% if allowed.upload_data %}<a class="btn btn-ghost" href="{% url 'upload' %}">{% icon "upload" 16 %} Upload a file</a>{% endif %}
+    </div>
+    <div class="panel-body" style="padding-left:0;padding-right:0;padding-bottom:0">
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr>
+            <th>Run</th><th>Started</th><th>Status</th><th>Started by</th><th class="hide-sm">Source</th>
+            <th class="right">Read</th><th class="right">Loaded</th><th class="right">Rejected</th>
+          </tr></thead>
+          <tbody>
+          {% for r in etl_runs %}
+            <tr>
+              <td class="num">#{{ r.run_id }}</td>
+              <td class="num">{{ r.started_at|date:"M d, H:i" }}</td>
+              <td><span class="pill {{ r.status|lower }}">{{ r.status|title }}</span></td>
+              <td>{{ r.triggered_by }}</td>
+              <td class="hide-sm cell-sub">{{ r.source|default:"" }}</td>
+              <td class="right num">{{ r.rows_read|num }}</td>
+              <td class="right num">{{ r.rows_loaded|num }}</td>
+              <td class="right num">{{ r.rows_rejected|num }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="8"><div class="empty"><h3>No loads yet</h3><p>Run <code>python -m etl.etl_pipeline</code> or upload a file.</p></div></td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+</div>
+
+{{ chart_data|json_script:"chart-data" }}
+{% endblock %}
